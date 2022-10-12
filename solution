@@ -1,0 +1,163 @@
+
+**A crime has taken place and the detective needs your help. 
+The detective gave you the crime scene report, but you somehow lost it. 
+You vaguely remember that the crime was a murder that occurred sometime on Jan.15, 2018 and that it took place in SQL City. 
+Start by retrieving the corresponding crime scene report from the police department’s database.**
+
+
+First ran a query to check the crime report to find information on the murder.
+
+SELECT * 
+FROM crime_scene_report
+WHERE type = 'murder' and date = 20180115
+
+date	type	description	city
+20180115	murder	Security footage shows that there were 2 witnesses. The first witness lives at the last house on "Northwestern Dr". The second witness, named Annabel, lives somewhere on "Franklin Ave".	SQL City
+
+
+I used the ORDER BY keyword along with DESC to sort through addresses on Northwestern Dr since a name wasn’t provided and found Morty Schapiro as the witness.
+
+SELECT * 
+FROM person
+WHERE address_street_name = 'Northwestern Dr'
+
+Order by address_number desc
+id	name	license_id	address_number	address_street_name	ssn
+14887	Morty Schapiro	118009	4919	Northwestern Dr	111564949
+17729	Lasonya Wildey	439686	3824	Northwestern Dr	917817122
+53890	Sophie Tiberio	957671	3755	Northwestern Dr	442830147
+
+
+
+SELECT * 
+FROM person
+WHERE address_street_name = 'Franklin Ave' and name like '%Ann%'
+
+id	name	license_id	address_number	address_street_name	ssn
+16371	Annabel Miller	490173	103	Franklin Ave	318771143
+
+
+I took the id numbers and ran a query in the interview table
+
+SELECT * 
+FROM interview
+WHERE person_id = 16371
+person_id	transcript
+16371	I saw the murder happen, and I recognized the killer from my gym when I was working out last week on January the 9th.
+
+SELECT * 
+FROM interview
+WHERE person_id = 14887
+person_id	transcript
+14887	I heard a gunshot and then saw a man run out. He had a "Get Fit Now Gym" bag. The membership number on the bag started with "48Z". Only gold members have those bags. The man got into a car with a plate that included "H42W".
+
+
+from both statements we deducted that the killer is a Get Fit Now member
+I ran a query in the get fit now member table with the information from our witness
+SELECT * FROM get_fit_now_member
+WHERE id like '%48z%'
+
+id	person_id	name	membership_start_date	membership_status
+48Z38	49550	Tomas Baisley	20170203	silver
+48Z7A	28819	Joe Germuska	20160305	gold
+48Z55	67318	Jeremy Bowers	20160101	gold
+
+The witness Statement said our killer had a bag that was only given to gold members so we have two gold members with the ID starting with 48Z
+SELECT * FROM person
+WHERE id = 28819
+28819	Joe Germuska	173289	111	Fisk Rd	138909730
+id	name	license_id	address_number	address_street_name	ssn
+
+SELECT * FROM person
+WHERE id = 67318
+id	name	license_id	address_number	address_street_name	ssn
+67318	Jeremy Bowers	423327	530	Washington Pl, Apt 3A	871539279
+					
+
+
+We have to find the suspects car all we have is a license plate 
+I ran a query in the person table to find their license first and then ran a query in the drivers license table using their DL number  and found Jeremy had a license plate close to the one given by the witness.
+SELECT * 
+FROM drivers_license
+WHERE id = 423327
+id	age	height	eye_color	hair_color	gender	plate_number	car_make	car_model
+423327	30	70	brown	brown	male	0H42W2	Chevrolet	Spark LS
+
+I attempted the same for the id number 173289, but there was no records.
+
+I ran another query in the interview table for id 67318
+And received further information for our investigation
+SELECT * 
+FROM interview
+WHERE person_id = 67318
+person_id	transcript
+67318	I was hired by a woman with a lot of money. I don't know her name but I know she's around 5'5" (65") or 5'7" (67"). She has red hair and she drives a Tesla Model S. I know that she attended the SQL Symphony Concert 3 times in December 2017.
+
+Ran a query in the events table to find attendees for the SQL Symphony concert having attended 3 times in December
+SELECT person_id, count(person_id) as attendance , event_name, 
+FROM facebook_event_checkin
+WHERE event_name = 'SQL Symphony Concert'and date like '%201712%'
+GROUP BY person_id
+HAVING count(person_id) > 2
+
+person_id	Attendance	event_name
+24556	3	SQL Symphony Concert
+99716	3	SQL Symphony Concer
+		
+
+
+
+
+
+I ran the following Query to find a match for females driving a tesla model S between the heights of 65 and 67
+
+SELECT *
+FROM drivers_license
+WHERE car_make = 'Tesla'
+GROUP BY height
+having height between 65 and 67
+id	age	gender	hair_color	height	car_make	car_model
+918773	48	female	red	65	Tesla	Model S
+291182	65	female	red	66	Tesla	Model S
+
+I ran another query in the person table to find out the names and id’s of our suspects
+SELECT *
+FROM person
+WHERE license_id = 918773 or license_id = 291182
+
+id	name	license_id	address_number	address_street_name	ssn
+78881	Red Korb	918773	107	Camerata Dr	961388910
+90700	Regina George	291182	332	Maple Ave	337169072
+
+I didn’t quite find a match so I edited my original query to be a bit more broad in the drivers_license table
+
+SELECT *
+FROM drivers_license
+WHERE car_make = 'Tesla' and hair_color = 'red'
+
+id	age	height	eye_color	hair_color	gender	plate_number	car_make	car_model
+202298	68	66	green	red	female	500123	Tesla	Model S
+291182	65	66	blue	red	female	08CM64	Tesla	Model S
+736081	79	69	brown	red	male	GCAQ6Y	Tesla	Model S
+918773	48	65	black	red	female	917UU3	Tesla	Model S
+
+SELECT * 
+FROM person 
+WHERE id = 99716
+
+id	name	license_id	address_number	address_street_name	ssn
+99716	Miranda Priestly	202298	1883	Golden Ave	987756388
+
+SELECT * 
+FROM drivers_license
+WHERE id = 202298
+id	age	height	eye_color	hair_color	gender	plate_number	car_make	car_model
+202298	68	66	green	red	female	500123	Tesla	Model S
+
+After review it was clear that Miranda Priestly was the master mind behind the Murder in SQL City.
+She attended the SQL Symphony 3 time in December 2017, she owns a Tesla Model S and she has red hair between the heigh of 65” and 67”
+INSERT INTO solution VALUES (1, 'Miranda Priestly');
+        
+        SELECT value FROM solution;
+value
+Congrats, you found the brains behind the murder! Everyone in SQL City hails you as the greatest SQL detective of all time. Time to break out the champagne!
